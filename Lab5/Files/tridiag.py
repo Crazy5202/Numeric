@@ -8,31 +8,31 @@ class TRIDIAG_SOLVER:
         self._d = d.copy()
         self._n = len(b)
 
-    def read_from_file(self, name):
-        """Ввести матрицу из файла"""
-        PATH = os.path.split(os.path.realpath(__file__))[0] + "/" + name
-        with open(PATH, "r") as f:
-            lines = f.readlines()
-            self._n = len(lines)
+    # def read_from_file(self, name):
+    #     """Ввести матрицу из файла"""
+    #     PATH = os.path.split(os.path.realpath(__file__))[0] + "/" + name
+    #     with open(PATH, "r") as f:
+    #         lines = f.readlines()
+    #         self._n = len(lines)
 
-            line_stripped = lines[0].strip().split(' ')
-            self._a.append(0)
-            self._b.append(float(line_stripped[0]))
-            self._c.append(float(line_stripped[1]))
-            self._d.append(float(line_stripped[2]))
+    #         line_stripped = lines[0].strip().split(' ')
+    #         self._a.append(0)
+    #         self._b.append(float(line_stripped[0]))
+    #         self._c.append(float(line_stripped[1]))
+    #         self._d.append(float(line_stripped[2]))
 
-            for i in range(1,self._n-1):
-                line_stripped = lines[i].strip().split(' ')
-                self._a.append(float(line_stripped[0]))
-                self._b.append(float(line_stripped[1]))
-                self._c.append(float(line_stripped[2]))
-                self._d.append(float(line_stripped[3]))
+    #         for i in range(1,self._n-1):
+    #             line_stripped = lines[i].strip().split(' ')
+    #             self._a.append(float(line_stripped[0]))
+    #             self._b.append(float(line_stripped[1]))
+    #             self._c.append(float(line_stripped[2]))
+    #             self._d.append(float(line_stripped[3]))
 
-            line_stripped = lines[self._n-1].strip().split(' ')
-            self._a.append(float(line_stripped[0]))
-            self._b.append(float(line_stripped[1]))
-            self._c.append(0)
-            self._d.append(float(line_stripped[2]))
+    #         line_stripped = lines[self._n-1].strip().split(' ')
+    #         self._a.append(float(line_stripped[0]))
+    #         self._b.append(float(line_stripped[1]))
+    #         self._c.append(0)
+    #         self._d.append(float(line_stripped[2]))
 
     def check_conditions(self):
         """Проверить корректность и устойчивость."""
@@ -87,11 +87,11 @@ if __name__ == "__main__":
 
     # решение с вводом через файл
 
-    solver.read_from_file("tridiag_try.txt") 
+    # solver.read_from_file("tridiag_try.txt") 
     
-    result = solver.solve()
-    for i in range (len(result)):
-        print(f"x_{i} = {round(result[i],3)}\n")
+    # result = solver.solve()
+    # for i in range (len(result)):
+    #     print(f"x_{i} = {round(result[i],3)}\n")
 
     # решение с вводом из кода
 

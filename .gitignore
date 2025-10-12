@@ -2,3 +2,4 @@
 __pycache__
 *.tmp
 ~$*
+Lab5/**/*.txt
