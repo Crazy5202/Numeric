@@ -63,13 +63,17 @@ class PARAB_SOLVER:
                 if self._approx == 1:
                     u[0] = u[1] - self._xd*math.exp(-0.5*cur_t)
                     u[self._n] = u[self._n-1] - self._xd*math.exp(-0.5*cur_t)
+
                 elif self._approx == 2:
                     u[0] = 1/3*(4*u[1] - u[2] - 2*self._xd*math.exp(-0.5*cur_t))
                     u[self._n] = 1/3*(-u[self._n-2] + 4*u[self._n-1] - 2*self._xd*math.exp(-0.5*cur_t))
+
                 elif self._approx == 3:
-                    u[0] = -self._xd*math.exp(-0.5*cur_t) + u[1] + self._xd**2/2*(u_prev[0]/self._td + 0.5*math.exp(-0.5*cur_t)*math.sin(0))
-                    u[0] *= 1/(1 + (self._xd**2)/(2*self._td))
-                    u[self._n] = 1/3*(-u[self._n-2] + 4*u[self._n-1] - 2*self._xd*math.exp(-0.5*cur_t))
+                    u[0] = u[1] - self._xd*math.exp(-0.5*cur_t) + self._xd**2/2*u_prev[0]/self._td
+                    u[0] /= 1 + (self._xd**2)/(2*self._td)
+
+                    u[self._n] = u[self._n-1] - self._xd*math.exp(-0.5*cur_t) + self._xd**2/2*(u_prev[self._n]/self._td + 0.5*math.exp(-0.5*cur_t)*math.sin(self._xd*self._n))
+                    u[self._n] /= 1 + (self._xd**2)/(2*self._td)
 
                 u_prev = deepcopy(u)
 
