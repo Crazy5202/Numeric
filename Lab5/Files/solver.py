@@ -45,7 +45,6 @@ class PARAB_SOLVER:
                 f.write(str(cur_x) + ' ' + str(u[i]) + ' ' + str(self._anal_sol(cur_x, t)) + '\n')
 
     def solve(self):
-        counter = 1
 
         u = [self._start_cond(i*self._xd) for i in range(0, self._n+1)]
         
@@ -70,9 +69,7 @@ class PARAB_SOLVER:
 
                 u_prev = deepcopy(u)
 
-                self._write_res(u, cur_t, counter)
-
-                counter += 1
+                self._write_res(u, cur_t, j)
 
         if self._scheme == 2:
             for j in range (1, self._t_steps+1):
@@ -99,12 +96,40 @@ class PARAB_SOLVER:
                 progon = TRIDIAG_SOLVER(a,b,c,d)
                 u = progon.solve()
 
-                self._write_res(u, cur_t, counter)
+                self._write_res(u, cur_t, j)
 
-                counter += 1
+        if self._scheme == 3:
+            param = 0.5
+
+            for j in range (1, self._t_steps+1):
+                cur_t = j*self._td
+                a = [0]*(self._n+1); b = [0]*(self._n+1); c = [0]*(self._n+1); d = [0]*(self._n+1)
+                    
+                for i in range(1, self._n):
+                    cur_x = self._xd*i
+
+                    a[i] = -self._td*param
+                    b[i] = self._xd**2 + 2*self._td*param
+                    c[i] = -self._td*param
+                    d[i] = u[i]*self._xd**2 + self._td*(1-param)*(u[i+1]-2*u[i]+u[i-1]) \
+                        + 0.5*self._xd**2*self._td*math.sin(cur_x)*(param*math.exp(-0.5*cur_t)+(1-param)*math.exp(-0.5*(cur_t-self._td)))
+
+                if self._approx == 1:
+                    b[0] = -1
+                    c[0] = 1
+                    d[0] = self._xd*math.exp(-0.5*cur_t)
+
+                    a[self._n] = -1
+                    b[self._n] = 1
+                    d[self._n] = -self._xd*math.exp(-0.5*cur_t)
+
+                progon = TRIDIAG_SOLVER(a,b,c,d)
+                u = progon.solve()
+
+                self._write_res(u, cur_t, j)
 
 
 if __name__ == "__main__":
-    solver = PARAB_SOLVER(scheme_type=2)
+    solver = PARAB_SOLVER(scheme_type=3)
     solver.solve()
     print("DONE!")
