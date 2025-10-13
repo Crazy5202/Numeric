@@ -4,7 +4,7 @@ import math
 import os
 import shutil
 from copy import deepcopy
-
+import sys
 
 
 DATA_FOLDER = "results"
@@ -47,11 +47,11 @@ class PARAB_SOLVER:
     def solve(self):
 
         u = [self._start_cond(i*self._xd) for i in range(0, self._n+1)]
+
+        u_prev = deepcopy(u)
         
         if self._scheme == 1:
-
-            u_prev = deepcopy(u)
-
+            
             for j in range (1, self._t_steps+1):
                 cur_t = j*self._td
                 for i in range(1, self._n):
@@ -72,7 +72,8 @@ class PARAB_SOLVER:
                     u[0] = u[1] - self._xd*math.exp(-0.5*cur_t) + self._xd**2/2*u_prev[0]/self._td
                     u[0] /= 1 + (self._xd**2)/(2*self._td)
 
-                    u[self._n] = u[self._n-1] - self._xd*math.exp(-0.5*cur_t) + self._xd**2/2*(u_prev[self._n]/self._td + 0.5*math.exp(-0.5*cur_t)*math.sin(self._xd*self._n))
+                    u[self._n] = u[self._n-1] - self._xd*math.exp(-0.5*cur_t) \
+                        + self._xd**2/2*(u_prev[self._n]/self._td + 0.5*math.exp(-0.5*cur_t)*math.sin(self._xd*self._n))
                     u[self._n] /= 1 + (self._xd**2)/(2*self._td)
 
                 u_prev = deepcopy(u)
@@ -101,8 +102,35 @@ class PARAB_SOLVER:
                     b[self._n] = 1
                     d[self._n] = -self._xd*math.exp(-0.5*cur_t)
 
+                elif self._approx == 2:
+                    b[0] = -3 - 1/self._td*a[1]
+                    c[0] = 4 - 1/self._td*b[1]
+                    d[0] = 2*self._xd*math.exp(-0.5*cur_t) - 1/self._td*d[1]
+
+                    a[self._n] = -4 + 1/self._td*b[self._n-1]
+                    b[self._n] = 3 + 1/self._td*c[self._n-1]
+                    d[self._n] = -2*self._xd*math.exp(-0.5*cur_t) + 1/self._td*d[self._n-1]
+
+                elif self._approx == 3:
+                    b[0] = 1 + (self._xd**2)/(2*self._td)
+                    c[0] = -1
+                    d[0] = -self._td*(u_prev[i+1]-2*u_prev[i]+u_prev[i-1])/(self._xd**2) \
+                        + 0.5*self._td*math.exp(-0.5*(cur_t-self._td))*math.sin(cur_x)
+
+                    a[self._n] = -1
+                    b[self._n] = 1 + (self._xd**2)/(2*self._td)
+                    d[self._n] = - self._xd*math.exp(-0.5*cur_t) \
+                        + self._xd**2/2*(u_prev[self._n]/self._td + 0.5*math.exp(-0.5*cur_t)*math.sin(self._xd*self._n))
+                
                 progon = TRIDIAG_SOLVER(a,b,c,d)
-                u = progon.solve()
+                
+                try:
+                    u = progon.solve()
+                except Exception as e:
+                    print(e)
+                    sys.exit()
+
+                u_prev = deepcopy(u)
 
                 self._write_res(u, cur_t, j)
 
@@ -136,8 +164,6 @@ class PARAB_SOLVER:
 
                 self._write_res(u, cur_t, j)
 
-
 if __name__ == "__main__":
-    solver = PARAB_SOLVER(scheme_type=1, approx_type=3)
+    solver = PARAB_SOLVER(scheme_type=2, approx_type=3)
     solver.solve()
-    print("DONE!")

@@ -1,12 +1,13 @@
 import os
+from copy import deepcopy
 
 class TRIDIAG_SOLVER:
     def __init__(self, a: list = [], b:list = [], c:list = [], d:list = []):
-        self._a = a.copy()
-        self._b = b.copy()
-        self._c = c.copy()
-        self._d = d.copy()
-        self._n = len(b)
+        self._a = deepcopy(a)
+        self._b = deepcopy(b)
+        self._c = deepcopy(c)
+        self._d = deepcopy(d)
+        self._n = len(d)
 
     # def read_from_file(self, name):
     #     """Ввести матрицу из файла"""
@@ -57,8 +58,8 @@ class TRIDIAG_SOLVER:
     def solve(self):
         """Решить методом прогонки."""
         if self.check_conditions() == False:
-            print("Не выполняется проверка!")
-            return []
+            #print("Не выполняется проверка!")
+            raise(ValueError("Не выполняется диагональное преобладание!"))
         A = []
         B = []
         x = [0 for _ in range(self._n)]
@@ -71,38 +72,37 @@ class TRIDIAG_SOLVER:
         for i in range (self._n-2, -1, -1):
             x[i] = A[i]*x[i+1]+B[i]
         if (self.check_solution(x)): 
-            #print("\nРешение верно!\n")
             return x
         else:
-            print("\nРешение неверно!\n")
-            return []
+            #return []
+            raise(ValueError("Ошибка решения!"))
 
     def print_matrix(self):
         """Напечатать матрицу."""
         for i in range (self._n):
             print(self._a[i], self._b[i], self._c[i], "=", self._d[i], "\n")
 
-if __name__ == "__main__":
-    solver = TRIDIAG_SOLVER()
+# if __name__ == "__main__":
+#     solver = TRIDIAG_SOLVER()
 
-    # решение с вводом через файл
+#     # решение с вводом через файл
 
-    # solver.read_from_file("tridiag_try.txt") 
+#     # solver.read_from_file("tridiag_try.txt") 
     
-    # result = solver.solve()
-    # for i in range (len(result)):
-    #     print(f"x_{i} = {round(result[i],3)}\n")
+#     # result = solver.solve()
+#     # for i in range (len(result)):
+#     #     print(f"x_{i} = {round(result[i],3)}\n")
 
-    # решение с вводом из кода
+#     # решение с вводом из кода
 
-    a = [0, -1, -9, -1, 9]
-    b = [-6, 13, -15, -7, -18]
-    c = [5, 6, -4, 1, 0]
-    d = [51, 100, -12, 47, -90]
+#     a = [0, -1, -9, -1, 9]
+#     b = [-6, 13, -15, -7, -18]
+#     c = [5, 6, -4, 1, 0]
+#     d = [51, 100, -12, 47, -90]
 
 
-    solver = TRIDIAG_SOLVER(a,b,c,d)
+#     solver = TRIDIAG_SOLVER(a,b,c,d)
 
-    result = solver.solve()
-    for i in range (len(result)):
-        print(f"x_{i} = {round(result[i],3)}\n")
+#     result = solver.solve()
+#     for i in range (len(result)):
+#         print(f"x_{i} = {round(result[i],3)}\n")
