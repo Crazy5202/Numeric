@@ -15,7 +15,7 @@ os.makedirs(data_full_path, exist_ok=True)
 
 # Вариант 7
 class PARAB_SOLVER:
-    def __init__(self, x_steps = 20, t_steps = 5000, scheme_type: int = 1, approx_type: int = 1):
+    def __init__(self, x_steps = 20, t_steps = 1000, scheme_type: int = 1, approx_type: int = 1):
         """
         Схема scheme_type: 1 - явная, 2 - неявная, 3 - Кранка-Николсона.
         
@@ -45,11 +45,14 @@ class PARAB_SOLVER:
                 f.write(str(cur_x) + ' ' + str(u[i]) + ' ' + str(self._anal_sol(cur_x, t)) + '\n')
 
     def solve(self):
-        counter = 0
+        counter = 1
 
         u = [self._start_cond(i*self._xd) for i in range(0, self._n+1)]
-        u_prev = deepcopy(u)
+        
         if self._scheme == 1:
+
+            u_prev = deepcopy(u)
+
             for j in range (1, self._t_steps+1):
                 cur_t = j*self._td
                 for i in range(1, self._n):
@@ -58,8 +61,12 @@ class PARAB_SOLVER:
                     u[i] = u_prev[i] + self._td*(u_prev[i+1]-2*u_prev[i]+u_prev[i-1])/(self._xd**2) \
                         + 0.5*self._td*math.exp(-0.5*(cur_t-self._td))*math.sin(cur_x)
 
-                u[0] = u[1] - self._xd*math.exp(-0.5*cur_t)
-                u[self._n] = u[self._n-1] - self._xd*math.exp(-0.5*cur_t)
+                if self._approx == 1:
+                    u[0] = u[1] - self._xd*math.exp(-0.5*cur_t)
+                    u[self._n] = u[self._n-1] - self._xd*math.exp(-0.5*cur_t)
+                else:
+                    u[0] = u[1] - self._xd*math.exp(-0.5*cur_t)
+                    u[self._n] = u[self._n-1] - self._xd*math.exp(-0.5*cur_t)
 
                 u_prev = deepcopy(u)
 
@@ -67,7 +74,37 @@ class PARAB_SOLVER:
 
                 counter += 1
 
+        if self._scheme == 2:
+            for j in range (1, self._t_steps+1):
+                cur_t = j*self._td
+                a = [0]*(self._n+1); b = [0]*(self._n+1); c = [0]*(self._n+1); d = [0]*(self._n+1)
+                    
+                for i in range(1, self._n):
+                    cur_x = self._xd*i
+
+                    a[i] = -self._td
+                    b[i] = self._xd**2 + 2*self._td
+                    c[i] = -self._td
+                    d[i] = u[i]*self._xd**2 + 0.5*self._xd**2*self._td*math.exp(-0.5*cur_t)*math.sin(cur_x)
+
+                if self._approx == 1:
+                    b[0] = -1
+                    c[0] = 1
+                    d[0] = self._xd*math.exp(-0.5*cur_t)
+
+                    a[self._n] = -1
+                    b[self._n] = 1
+                    d[self._n] = -self._xd*math.exp(-0.5*cur_t)
+
+                progon = TRIDIAG_SOLVER(a,b,c,d)
+                u = progon.solve()
+
+                self._write_res(u, cur_t, counter)
+
+                counter += 1
+
+
 if __name__ == "__main__":
-    solver = PARAB_SOLVER()
+    solver = PARAB_SOLVER(scheme_type=2)
     solver.solve()
     print("DONE!")
