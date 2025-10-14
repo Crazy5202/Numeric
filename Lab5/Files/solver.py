@@ -32,9 +32,9 @@ class PARAB_SOLVER:
         self._t_steps = int(max_t // self._td)
 
         self._start_cond = lambda x: math.sin(x)
-        self._anal_sol = lambda x, t: math.exp(-0.5*t)*math.sin(x)
+        self._true_sol = lambda x, t: math.exp(-0.5*t)*math.sin(x)
 
-    def _write_res(self, u:list[float], t:float, num: int):
+    def _write_res(self, u:list[float], ts: list[float], t:float, num: int):
         """
         Записать время, вычисленное и точное значение для каждой точки в файл.
         """
@@ -44,15 +44,36 @@ class PARAB_SOLVER:
             f.write(str(round(t,5)) + '\n')
             for i in range (self._n+1):
                 cur_x = i*self._xd
-                f.write(str(cur_x) + ' ' + str(u[i]) + ' ' + str(self._anal_sol(cur_x, t)) + '\n')
+                f.write(str(cur_x) + ' ' + str(u[i]) + ' ' + str(ts[i]) + '\n')
 
     def _cleanup_dir(self):
+        """
+        Очистить папку результатов от "*.txt".
+        """
         txt_files = [f for f in os.listdir(self._path) if f.endswith('.txt')]
     
         for file in txt_files:
             file_path = os.path.join(self._path, file)
             os.remove(file_path)
             # print(f"Removed: {file_path}")
+
+    def _pogr_step(self, u: list[float], ts: list[float]):
+        """
+        Рассчитать погрешность для данного времени.
+        """
+        pogr = 0
+        for i in range (self._n+1):
+            pogr += abs(u[i]-ts[i]) 
+        return pogr / (self._n+1)
+        
+    def _post_solution(self, u:list[float], t:float, num: int):
+        """
+        Сделать действия после шага решения.
+        """
+        cur_true = [self._true_sol(i*self._xd, t) for i in range (self._n+1)]
+        self._write_res(u, cur_true,  t, num)
+        return self._pogr_step(u, cur_true)
+
 
     def solve(self, scheme_type: int = 1, approx_type: int = 1, cron_param = 0.5):
         """
@@ -73,6 +94,8 @@ class PARAB_SOLVER:
         u = [self._start_cond(i*self._xd) for i in range(0, self._n+1)]
 
         u_prev = deepcopy(u)
+
+        pogr = 0
         
         if scheme_type == 1:
             
@@ -102,7 +125,7 @@ class PARAB_SOLVER:
 
                 u_prev = deepcopy(u)
 
-                self._write_res(u, cur_t, j)
+                pogr = max(pogr, self._post_solution(u, cur_t, j))
 
         else:
             param = 1
@@ -161,7 +184,9 @@ class PARAB_SOLVER:
 
                 u_prev = deepcopy(u)
 
-                self._write_res(u, cur_t, j)
+                pogr = max(pogr, self._post_solution(u, cur_t, j))
+
+        print(f"Максимальный MAE в процессе решения: {pogr}")
 
 if __name__ == "__main__":
     solver = PARAB_SOLVER(saving_path=DATA_PATH)
