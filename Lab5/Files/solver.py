@@ -1,4 +1,5 @@
 from tridiag import TRIDIAG_SOLVER
+from visual import visualise
 
 import math
 import os
@@ -6,12 +7,11 @@ import shutil
 from copy import deepcopy
 import sys
 
-
-DATA_FOLDER = "results"
-data_full_path = os.path.join(os.path.split(os.path.realpath(__file__))[0], DATA_FOLDER)
-if os.path.exists(data_full_path):
-        shutil.rmtree(data_full_path)
-os.makedirs(data_full_path, exist_ok=True)
+data_folder = "results"
+DATA_PATH = os.path.join(os.path.split(os.path.realpath(__file__))[0], data_folder)
+if os.path.exists(DATA_PATH):
+        shutil.rmtree(DATA_PATH)
+os.makedirs(DATA_PATH, exist_ok=True)
 
 # Вариант 7
 class PARAB_SOLVER:
@@ -37,7 +37,7 @@ class PARAB_SOLVER:
 
     def _write_res(self, u:list[float], t:float, num: int):
         
-        PATH = data_full_path + '/' + str(num) + ".txt"
+        PATH = DATA_PATH + '/' + str(num) + ".txt"
         with open(PATH, "w") as f:
             f.write(str(round(t,5)) + '\n')
             for i in range (self._n+1):
@@ -80,7 +80,11 @@ class PARAB_SOLVER:
 
                 self._write_res(u, cur_t, j)
 
-        if self._scheme == 2:
+        else:
+            param = 1
+            if self._scheme == 3:
+                param = 0.5
+
             for j in range (1, self._t_steps+1):
                 cur_t = j*self._td
                 a = [0]*(self._n+1); b = [0]*(self._n+1); c = [0]*(self._n+1); d = [0]*(self._n+1)
@@ -88,10 +92,11 @@ class PARAB_SOLVER:
                 for i in range(1, self._n):
                     cur_x = self._xd*i
 
-                    a[i] = -self._td
-                    b[i] = self._xd**2 + 2*self._td
-                    c[i] = -self._td
-                    d[i] = u[i]*self._xd**2 + 0.5*self._xd**2*self._td*math.exp(-0.5*cur_t)*math.sin(cur_x)
+                    a[i] = -self._td*param
+                    b[i] = self._xd**2 + 2*self._td*param
+                    c[i] = -self._td*param
+                    d[i] = u[i]*self._xd**2 + self._td*(1-param)*(u[i+1]-2*u[i]+u[i-1]) \
+                        + 0.5*self._xd**2*self._td*math.sin(cur_x)*(param*math.exp(-0.5*cur_t)+(1-param)*math.exp(-0.5*(cur_t-self._td)))
 
                 if self._approx == 1:
                     b[0] = -1
@@ -134,36 +139,7 @@ class PARAB_SOLVER:
 
                 self._write_res(u, cur_t, j)
 
-        if self._scheme == 3:
-            param = 0.5
-
-            for j in range (1, self._t_steps+1):
-                cur_t = j*self._td
-                a = [0]*(self._n+1); b = [0]*(self._n+1); c = [0]*(self._n+1); d = [0]*(self._n+1)
-                    
-                for i in range(1, self._n):
-                    cur_x = self._xd*i
-
-                    a[i] = -self._td*param
-                    b[i] = self._xd**2 + 2*self._td*param
-                    c[i] = -self._td*param
-                    d[i] = u[i]*self._xd**2 + self._td*(1-param)*(u[i+1]-2*u[i]+u[i-1]) \
-                        + 0.5*self._xd**2*self._td*math.sin(cur_x)*(param*math.exp(-0.5*cur_t)+(1-param)*math.exp(-0.5*(cur_t-self._td)))
-
-                if self._approx == 1:
-                    b[0] = -1
-                    c[0] = 1
-                    d[0] = self._xd*math.exp(-0.5*cur_t)
-
-                    a[self._n] = -1
-                    b[self._n] = 1
-                    d[self._n] = -self._xd*math.exp(-0.5*cur_t)
-
-                progon = TRIDIAG_SOLVER(a,b,c,d)
-                u = progon.solve()
-
-                self._write_res(u, cur_t, j)
-
 if __name__ == "__main__":
-    solver = PARAB_SOLVER(scheme_type=2, approx_type=3)
+    solver = PARAB_SOLVER(scheme_type=3, approx_type=1)
     solver.solve()
+    visualise(path=DATA_PATH)
