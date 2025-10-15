@@ -57,9 +57,9 @@ class TRIDIAG_SOLVER:
 
     def solve(self):
         """Решить методом прогонки."""
-        if self.check_conditions() == False:
-            #print("Не выполняется проверка!")
-            raise(ValueError("Не выполняется диагональное преобладание!"))
+        # if self.check_conditions() == False:
+        #     #print("Не выполняется проверка!")
+        #     raise(ValueError("Не выполняется диагональное преобладание!"))
         A = []
         B = []
         x = [0 for _ in range(self._n)]

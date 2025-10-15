@@ -16,7 +16,7 @@ class PARAB_SOLVER:
         """
         Папка сохранения результатов saving_path (не должно быть других .txt).
         
-        Разбиение по координате x x_steps.
+        Разбиение по x-координате x_steps.
 
         Конечное время max_t.
         """
@@ -142,8 +142,8 @@ class PARAB_SOLVER:
                     a[i] = -self._td*param
                     b[i] = self._xd**2 + 2*self._td*param
                     c[i] = -self._td*param
-                    d[i] = u[i]*self._xd**2 + self._td*(1-param)*(u[i+1]-2*u[i]+u[i-1]) \
-                        + 0.5*self._xd**2*self._td*math.sin(cur_x)*(param*math.exp(-0.5*cur_t)+(1-param)*math.exp(-0.5*(cur_t-self._td)))
+                    d[i] = u[i]*(self._xd**2) + self._td*(1-param)*(u[i+1]-2*u[i]+u[i-1]) \
+                        + 0.5*(self._xd**2)*self._td*math.sin(cur_x)*(param*math.exp(-0.5*cur_t)+(1-param)*math.exp(-0.5*(cur_t-self._td)))
 
                 if approx_type == 1:
                     b[0] = -1
@@ -155,13 +155,13 @@ class PARAB_SOLVER:
                     d[self._n] = -self._xd*math.exp(-0.5*cur_t)
 
                 elif approx_type == 2:
-                    b[0] = -3 - 1/self._td*a[1]
-                    c[0] = 4 - 1/self._td*b[1]
-                    d[0] = 2*self._xd*math.exp(-0.5*cur_t) - 1/self._td*d[1]
+                    b[0] = -3 - a[1] / self._td / param
+                    c[0] = 4 - b[1] / self._td / param
+                    d[0] = 2*self._xd*math.exp(-0.5*cur_t) - d[1] / self._td / param
 
-                    a[self._n] = -4 + 1/self._td*b[self._n-1]
-                    b[self._n] = 3 + 1/self._td*c[self._n-1]
-                    d[self._n] = -2*self._xd*math.exp(-0.5*cur_t) + 1/self._td*d[self._n-1]
+                    a[self._n] = -4 + b[self._n-1] / self._td / param
+                    b[self._n] = 3 + c[self._n-1] / self._td / param
+                    d[self._n] = -2*self._xd*math.exp(-0.5*cur_t) + d[self._n-1] / self._td / param
 
                 elif approx_type == 3:
                     b[0] = 1 + (self._xd**2)/(2*self._td)
@@ -176,11 +176,13 @@ class PARAB_SOLVER:
                 
                 progon = TRIDIAG_SOLVER(a,b,c,d)
                 
-                try:
-                    u = progon.solve()
-                except Exception as e:
-                    print(e)
-                    sys.exit()
+                # try:
+                #     u = progon.solve()
+                # except Exception as e:
+                #     print(e)
+                #     sys.exit()
+
+                u = progon.solve()
 
                 u_prev = deepcopy(u)
 
@@ -191,5 +193,10 @@ class PARAB_SOLVER:
 if __name__ == "__main__":
     solver = PARAB_SOLVER(saving_path=DATA_PATH)
 
-    solver.solve(1,1)
-    visualise(path=DATA_PATH)
+    # solver.solve(1, 1)
+    # visualise(path=DATA_PATH)
+
+    for i in range (1,4):
+        for j in range (1,4):
+            solver.solve(i,j)
+            visualise(path=DATA_PATH)
