@@ -38,17 +38,21 @@ class PARAB_SOLVER:
         self._start_cond = lambda x: math.sin(x)
         self._true_sol = lambda x, t: math.exp(-0.5*t)*math.sin(x)
 
-    def _write_res(self, u:list[float], ts: list[float], t:float, num: int):
+    def _write_res(self, u:list[float], ts: list[float], t:float, num: int, pogr: float):
         """
         Записать время, вычисленное и точное значение для каждой точки в файл.
         """
         
         ind_path = self._path + '/' + str(num) + ".txt"
         with open(ind_path, "w") as f:
-            f.write(str(round(t,5)) + '\n')
+            f.write(str(t) + '\n')
             for i in range (self._n+1):
                 cur_x = i*self._xd
                 f.write(str(cur_x) + ' ' + str(u[i]) + ' ' + str(ts[i]) + '\n')
+
+        pogr_path = self._path + "/p.txt"
+        with open(pogr_path, "a") as f:
+            f.write(str(t) + ' ' + str(pogr) + '\n')
 
     def _cleanup_dir(self):
         """
@@ -67,16 +71,16 @@ class PARAB_SOLVER:
         """
         pogr = 0
         for i in range (self._n+1):
-            pogr += abs(u[i]-ts[i]) 
-        return pogr / (self._n+1)
+            pogr = max(pogr, abs(u[i]-ts[i]))
+        return pogr
         
     def _post_solution(self, u:list[float], t:float, num: int):
         """
         Сделать действия после шага решения.
         """
         cur_true = [self._true_sol(i*self._xd, t) for i in range (self._n+1)]
-        self._write_res(u, cur_true,  t, num)
-        return self._pogr_step(u, cur_true)
+        pogr = self._pogr_step(u, cur_true)
+        self._write_res(u, cur_true,  t, num, pogr) 
 
 
     def solve(self, scheme_type: int = 1, approx_type: int = 1, cron_param = 0.5):
@@ -129,7 +133,7 @@ class PARAB_SOLVER:
 
                 u_prev = deepcopy(u)
 
-                pogr = max(pogr, self._post_solution(u, cur_t, j))
+                self._post_solution(u, cur_t, j)
 
         else:
             param = 1
@@ -189,9 +193,7 @@ class PARAB_SOLVER:
 
                 u_prev = deepcopy(u)
 
-                pogr = max(pogr, self._post_solution(u, cur_t, j))
-
-        print(f"\nМаксимальный MAE в процессе решения: {pogr}\n")
+                self._post_solution(u, cur_t, j)
 
 if __name__ == "__main__":
     solver = PARAB_SOLVER(saving_path=DATA_PATH)
