@@ -11,7 +11,7 @@ def visualise(path):
 
     data_files = natsorted(data_files)
 
-    figure = plt.figure(figsize=(14, 9))
+    figure = plt.figure(figsize=(15, 9))
     counter = 1
 
     chosen_files = [data_files[len(data_files)//4], data_files[len(data_files)//2], data_files[-1]]
@@ -30,6 +30,7 @@ def visualise(path):
                 u_true.append(float(line_stripped[2]))
             
             p = figure.add_subplot(2,len(chosen_files),counter)
+            #plt.ylim(None, 1.0)
 
             p.plot(x, u_solved, marker='o', linestyle='-', color='red', label='solved')
             p.plot(x, u_true, marker='o', linestyle='--', color='blue', label='true')
@@ -51,6 +52,7 @@ def visualise(path):
             pogr.append(float(line_stripped[1]))
 
         p = figure.add_subplot(2,1,2)
+        #plt.ylim(None, 0.01)
 
         p.plot(x, pogr, marker='', linestyle='-', color='red')
 

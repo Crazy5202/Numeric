@@ -3,7 +3,6 @@ import os
 os.environ["QT_LOGGING_RULES"] = "qt.qpa.wayland=false;qt.qpa.socketnotifier=false"
 
 import math
-import shutil
 from copy import deepcopy
 import sys
 
@@ -102,8 +101,6 @@ class PARAB_SOLVER:
         u = [self._start_cond(i*self._xd) for i in range(0, self._n+1)]
 
         u_prev = deepcopy(u)
-
-        pogr = 0
         
         if scheme_type == 1:
             
@@ -128,7 +125,7 @@ class PARAB_SOLVER:
                     u[0] /= 1 + (self._xd**2)/(2*self._td)
 
                     u[self._n] = u[self._n-1] - self._xd*math.exp(-0.5*cur_t) \
-                        + self._xd**2/2*(u_prev[self._n]/self._td + 0.5*math.exp(-0.5*cur_t)*math.sin(self._xd*self._n))
+                        + self._xd**2/2*(u_prev[self._n]/self._td)
                     u[self._n] /= 1 + (self._xd**2)/(2*self._td)
 
                 u_prev = deepcopy(u)
@@ -179,7 +176,7 @@ class PARAB_SOLVER:
                     a[self._n] = -1
                     b[self._n] = 1 + (self._xd**2)/(2*self._td)
                     d[self._n] = - self._xd*math.exp(-0.5*cur_t) \
-                        + self._xd**2/2*(u_prev[self._n]/self._td + 0.5*math.exp(-0.5*cur_t)*math.sin(self._xd*self._n))
+                        + self._xd**2/2*(u_prev[self._n]/self._td)
                 
                 progon = TRIDIAG_SOLVER(a,b,c,d)
                 
@@ -187,7 +184,7 @@ class PARAB_SOLVER:
                 #     u = progon.solve()
                 # except Exception as e:
                 #     print(e)
-                #     sys.exit()
+                #     sys.exit(1)
 
                 u = progon.solve()
 
