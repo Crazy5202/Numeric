@@ -1,14 +1,18 @@
-from tridiag import TRIDIAG_SOLVER
-from visual import visualise
+import os
+
+os.environ["QT_LOGGING_RULES"] = "qt.qpa.wayland=false;qt.qpa.socketnotifier=false"
 
 import math
-import os
 import shutil
 from copy import deepcopy
 import sys
 
+from tridiag import TRIDIAG_SOLVER
+from visual import visualise
+
 data_folder = "results"
 DATA_PATH = os.path.join(os.path.split(os.path.realpath(__file__))[0], data_folder)
+os.makedirs(DATA_PATH, exist_ok=True)
 
 # Вариант 7
 class PARAB_SOLVER:
@@ -28,7 +32,7 @@ class PARAB_SOLVER:
         
         self._n = x_steps
         self._xd = math.pi / self._n
-        self._td = 0.1*self._xd**2
+        self._td = 0.5*self._xd**2
         self._t_steps = int(max_t // self._td)
 
         self._start_cond = lambda x: math.sin(x)
@@ -166,8 +170,7 @@ class PARAB_SOLVER:
                 elif approx_type == 3:
                     b[0] = 1 + (self._xd**2)/(2*self._td)
                     c[0] = -1
-                    d[0] = -self._td*(u_prev[i+1]-2*u_prev[i]+u_prev[i-1])/(self._xd**2) \
-                        + 0.5*self._td*math.exp(-0.5*(cur_t-self._td))*math.sin(cur_x)
+                    d[0] = -self._xd*math.exp(-0.5*cur_t)
 
                     a[self._n] = -1
                     b[self._n] = 1 + (self._xd**2)/(2*self._td)
@@ -188,12 +191,12 @@ class PARAB_SOLVER:
 
                 pogr = max(pogr, self._post_solution(u, cur_t, j))
 
-        print(f"Максимальный MAE в процессе решения: {pogr}")
+        print(f"\nМаксимальный MAE в процессе решения: {pogr}\n")
 
 if __name__ == "__main__":
     solver = PARAB_SOLVER(saving_path=DATA_PATH)
 
-    # solver.solve(1, 1)
+    # solver.solve(3, 1)
     # visualise(path=DATA_PATH)
 
     for i in range (1,4):
