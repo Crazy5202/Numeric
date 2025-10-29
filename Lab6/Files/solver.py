@@ -1,0 +1,202 @@
+import os
+
+os.environ["QT_LOGGING_RULES"] = "qt.qpa.wayland=false;qt.qpa.socketnotifier=false"
+
+import math
+from copy import deepcopy
+
+from tridiag import TRIDIAG_SOLVER
+from visual import visualise
+
+data_folder = "results"
+DATA_PATH = os.path.join(os.path.split(os.path.realpath(__file__))[0], data_folder)
+os.makedirs(DATA_PATH, exist_ok=True)
+
+# Вариант 7
+class PARAB_SOLVER:
+    def __init__(self, saving_path, x_steps = 20, max_t = 2.0):
+        """
+        Папка сохранения результатов saving_path (не должно быть других .txt).
+        
+        Разбиение по x-координате x_steps.
+
+        Конечное время max_t.
+        """
+
+        if not x_steps >= 3 and max_t > 0:
+            raise ValueError("Неверно указаны шаги!")
+        
+        self._path = saving_path
+        
+        self._n = x_steps
+        self._xd = math.pi / 2 / self._n
+        self._td = 0.5*self._xd
+        self._t_steps = int(max_t // self._td)
+
+        self._start_cond = lambda x: math.exp(-x)*math.cos(x)
+        self._true_sol = lambda x, t: math.exp(-t-x)*math.cos(x)*math.cos(2*t)
+
+    def _write_res(self, u:list[float], ts: list[float], t:float, num: int, pogr: float):
+        """
+        Записать время, вычисленное и точное значение для каждой точки в файл.
+        """
+        
+        ind_path = self._path + '/' + str(num) + ".txt"
+        with open(ind_path, "w") as f:
+            f.write(str(t) + '\n')
+            for i in range (self._n+1):
+                cur_x = i*self._xd
+                f.write(str(cur_x) + ' ' + str(u[i]) + ' ' + str(ts[i]) + '\n')
+
+        pogr_path = self._path + "/p.txt"
+        with open(pogr_path, "a") as f:
+            f.write(str(t) + ' ' + str(pogr) + '\n')
+
+    def _cleanup_dir(self):
+        """
+        Очистить папку результатов от "*.txt".
+        """
+        txt_files = [f for f in os.listdir(self._path) if f.endswith('.txt')]
+    
+        for file in txt_files:
+            file_path = os.path.join(self._path, file)
+            os.remove(file_path)
+            # print(f"Removed: {file_path}")
+
+    def _pogr_step(self, u: list[float], ts: list[float]):
+        """
+        Рассчитать погрешность для данного времени.
+        """
+        pogr = 0
+        for i in range (self._n+1):
+            pogr = max(pogr, abs(u[i]-ts[i]))
+        return pogr
+        
+    def _post_solution(self, u:list[float], t:float, num: int):
+        """
+        Сделать действия после шага решения.
+        """
+        cur_true = [self._true_sol(i*self._xd, t) for i in range (self._n+1)]
+        pogr = self._pogr_step(u, cur_true)
+        self._write_res(u, cur_true,  t, num, pogr) 
+
+
+    def solve(self, scheme_type: int = 1, approx_type: int = 1):
+        """
+        Вычислить и сохранить решение.
+
+        Схема scheme_type: 1 - явная, 2 - неявная.
+        
+        Аппроксимация approx_type: 1 - 1п2т, 2 - 2п2т.
+
+        Параметр схемы Кранка-Николсона cron_param: [0;1]
+        """
+
+        if scheme_type not in [1,2] and approx_type not in [1,2]:
+            raise ValueError("Неверно указаны параметры решателя!")
+        
+        self._cleanup_dir()
+
+        u_prev = [self._start_cond(i*self._xd) for i in range(0, self._n+1)]
+        u_cur = u_new = deepcopy(u_prev)
+
+        if (approx_type == 1):
+            for i in range(self._n+1):
+                u_cur[i] = u_prev[i] - self._td*math.exp(i*self._xd)*math.cos(i*self._xd)
+        else:
+            pass
+        
+        if scheme_type == 1:
+
+            for j in range (1, self._t_steps+1):
+
+                cur_t = j*self._td
+                for i in range(1, self._n):
+
+                    cur_x = self._xd*i
+
+                    u_new[i] = 2*u_cur[i] - u_prev[i] + self._td*u_prev[i] + (self._td/self._xd)**2*(u_cur[i+1]-2*u_cur[i]+u_cur[i-1]) \
+                        + self._td**2/self._xd*(u_cur[i+1]-u_cur[i-1]) - 3*self._td**2*u_cur[i]
+                    u_new[i] /= 1+self._td
+
+                u_new[0] = math.exp(-cur_t)*math.cos(2*cur_t)
+                # u_new[self._n] = 0
+
+                self._post_solution(u_new, cur_t, j)
+
+                u_prev = deepcopy(u_cur)
+                u_cur = deepcopy(u_new)
+
+                
+
+        else:
+            pass
+            # param = 1
+            # if scheme_type == 3:
+            #     param = 0.5
+
+            # for j in range (1, self._t_steps+1):
+            #     cur_t = j*self._td
+            #     a = [0]*(self._n+1); b = [0]*(self._n+1); c = [0]*(self._n+1); d = [0]*(self._n+1)
+                    
+            #     for i in range(1, self._n):
+            #         cur_x = self._xd*i
+
+            #         a[i] = -self._td*param
+            #         b[i] = self._xd**2 + 2*self._td*param
+            #         c[i] = -self._td*param
+            #         d[i] = u[i]*(self._xd**2) + self._td*(1-param)*(u[i+1]-2*u[i]+u[i-1]) \
+            #             + 0.5*(self._xd**2)*self._td*math.sin(cur_x)*(param*math.exp(-0.5*cur_t)+(1-param)*math.exp(-0.5*(cur_t-self._td)))
+
+            #     if approx_type == 1:
+            #         b[0] = -1
+            #         c[0] = 1
+            #         d[0] = self._xd*math.exp(-0.5*cur_t)
+
+            #         a[self._n] = -1
+            #         b[self._n] = 1
+            #         d[self._n] = -self._xd*math.exp(-0.5*cur_t)
+
+            #     elif approx_type == 2:
+            #         b[0] = -3 - a[1] / self._td / param
+            #         c[0] = 4 - b[1] / self._td / param
+            #         d[0] = 2*self._xd*math.exp(-0.5*cur_t) - d[1] / self._td / param
+
+            #         a[self._n] = -4 + b[self._n-1] / self._td / param
+            #         b[self._n] = 3 + c[self._n-1] / self._td / param
+            #         d[self._n] = -2*self._xd*math.exp(-0.5*cur_t) + d[self._n-1] / self._td / param
+
+            #     elif approx_type == 3:
+            #         b[0] = 1 + (self._xd**2)/(2*self._td)
+            #         c[0] = -1
+            #         d[0] = -self._xd*math.exp(-0.5*cur_t)
+
+            #         a[self._n] = -1
+            #         b[self._n] = 1 + (self._xd**2)/(2*self._td)
+            #         d[self._n] = - self._xd*math.exp(-0.5*cur_t) \
+            #             + self._xd**2/2*(u_prev[self._n]/self._td)
+                
+            #     progon = TRIDIAG_SOLVER(a,b,c,d)
+                
+            #     # try:
+            #     #     u = progon.solve()
+            #     # except Exception as e:
+            #     #     print(e)
+            #     #     sys.exit(1)
+
+            #     u = progon.solve()
+
+            #     u_prev = deepcopy(u)
+
+            #     self._post_solution(u, cur_t, j)
+
+if __name__ == "__main__":
+    solver = PARAB_SOLVER(saving_path=DATA_PATH)
+
+    solver.solve(1, 1)
+    visualise(path=DATA_PATH)
+
+    # for i in range (1,4):
+    #     for j in range (1,4):
+    #         solver.solve(i,j)
+    #         visualise(path=DATA_PATH)
