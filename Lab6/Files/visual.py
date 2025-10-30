@@ -15,7 +15,7 @@ def visualise(path: str, num_plots: int = 3, t_round: int = 3):
 
     chosen_files = [data_files[data_step*i] for i in range(num_plots)]
 
-    figure = plt.figure(figsize=(15, 9))
+    figure = plt.figure(figsize=(18, 9))
     counter = 1
 
     for file in chosen_files:

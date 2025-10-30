@@ -91,20 +91,26 @@ class PARAB_SOLVER:
 
         Параметр схемы Кранка-Николсона cron_param: [0;1]
         """
-
+        # Подготовочные штуки
         if scheme_type not in [1,2] and approx_type not in [1,2]:
             raise ValueError("Неверно указаны параметры решателя!")
         
         self._cleanup_dir()
 
+        # Для t=0
         u_prev = [self._start_cond(i*self._xd) for i in range(0, self._n+1)]
         u_cur = u_new = deepcopy(u_prev)
 
+        # Для t=1 из второго начального условия
         if (approx_type == 1):
             for i in range(self._n+1):
-                u_cur[i] = u_prev[i] - self._td*math.exp(i*self._xd)*math.cos(i*self._xd)
+                x_cur = i*self._xd
+                u_cur[i] = u_prev[i] - self._td*math.exp(x_cur)*math.cos(x_cur)
         else:
-            pass
+            for i in range(self._n+1):
+                x_cur = i*self._xd
+                u_cur[i] = u_prev[i] - math.exp(-x_cur)*math.cos(x_cur)*(self._td-self._td**2) \
+                    - self._td**2/2*math.exp(-x_cur)*5*math.cos(x_cur)
         
         if scheme_type == 1:
 
@@ -113,21 +119,17 @@ class PARAB_SOLVER:
                 cur_t = j*self._td
                 for i in range(1, self._n):
 
-                    cur_x = self._xd*i
-
                     u_new[i] = 2*u_cur[i] - u_prev[i] + self._td*u_prev[i] + (self._td/self._xd)**2*(u_cur[i+1]-2*u_cur[i]+u_cur[i-1]) \
                         + self._td**2/self._xd*(u_cur[i+1]-u_cur[i-1]) - 3*self._td**2*u_cur[i]
-                    u_new[i] /= 1+self._td
+                    u_new[i] /= (1+self._td)
 
                 u_new[0] = math.exp(-cur_t)*math.cos(2*cur_t)
-                # u_new[self._n] = 0
+                #u_new[self._n] = 0
 
                 self._post_solution(u_new, cur_t, j)
 
                 u_prev = deepcopy(u_cur)
                 u_cur = deepcopy(u_new)
-
-                
 
         else:
             pass
@@ -191,12 +193,12 @@ class PARAB_SOLVER:
             #     self._post_solution(u, cur_t, j)
 
 if __name__ == "__main__":
-    solver = PARAB_SOLVER(saving_path=DATA_PATH)
+    max_t = 5.0
+    num_plots = 5
 
-    solver.solve(1, 1)
-    visualise(path=DATA_PATH)
+    solver = PARAB_SOLVER(saving_path=DATA_PATH, max_t = max_t)
 
-    # for i in range (1,4):
-    #     for j in range (1,4):
-    #         solver.solve(i,j)
-    #         visualise(path=DATA_PATH)
+    for i in range (1,2):
+        for j in range (1,3):
+            solver.solve(i, j)
+            visualise(path=DATA_PATH, num_plots=num_plots)
