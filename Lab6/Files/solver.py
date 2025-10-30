@@ -117,14 +117,15 @@ class PARAB_SOLVER:
             for j in range (1, self._t_steps+1):
 
                 cur_t = j*self._td
+
+                u_new[0] = math.exp(-cur_t)*math.cos(2*cur_t)
+                #u_new[self._n] = 0
+
                 for i in range(1, self._n):
 
                     u_new[i] = 2*u_cur[i] - u_prev[i] + self._td*u_prev[i] + (self._td/self._xd)**2*(u_cur[i+1]-2*u_cur[i]+u_cur[i-1]) \
                         + self._td**2/self._xd*(u_cur[i+1]-u_cur[i-1]) - 3*self._td**2*u_cur[i]
                     u_new[i] /= (1+self._td)
-
-                u_new[0] = math.exp(-cur_t)*math.cos(2*cur_t)
-                #u_new[self._n] = 0
 
                 self._post_solution(u_new, cur_t, j)
 
@@ -132,65 +133,45 @@ class PARAB_SOLVER:
                 u_cur = deepcopy(u_new)
 
         else:
-            pass
-            # param = 1
-            # if scheme_type == 3:
-            #     param = 0.5
 
-            # for j in range (1, self._t_steps+1):
-            #     cur_t = j*self._td
-            #     a = [0]*(self._n+1); b = [0]*(self._n+1); c = [0]*(self._n+1); d = [0]*(self._n+1)
+            for j in range (1, self._t_steps+1):
+                cur_t = j*self._td
+
+                u_new[0] = math.exp(-cur_t)*math.cos(2*cur_t)
+                #u_new[self._n] = 0
+
+                a = [0]*(self._n-1); b = [0]*(self._n-1); c = [0]*(self._n-1); d = [0]*(self._n-1)
                     
-            #     for i in range(1, self._n):
-            #         cur_x = self._xd*i
+                for i in range(self._n-1):
 
-            #         a[i] = -self._td*param
-            #         b[i] = self._xd**2 + 2*self._td*param
-            #         c[i] = -self._td*param
-            #         d[i] = u[i]*(self._xd**2) + self._td*(1-param)*(u[i+1]-2*u[i]+u[i-1]) \
-            #             + 0.5*(self._xd**2)*self._td*math.sin(cur_x)*(param*math.exp(-0.5*cur_t)+(1-param)*math.exp(-0.5*(cur_t-self._td)))
+                    a[i] = -1/self._xd**2 + 1/self._xd
+                    b[i] = 1/self._td**2 + 1/self._td + 2/self._xd**2 + 3
+                    c[i] = -(1/self._xd**2 + 1/self._xd)
+                    d[i] = (2*u_cur[i+1]-u_prev[i+1])/self._td**2 + u_prev[i+1]/self._td
 
-            #     if approx_type == 1:
-            #         b[0] = -1
-            #         c[0] = 1
-            #         d[0] = self._xd*math.exp(-0.5*cur_t)
+                d[0] -= u_new[0]*a[0]
+                a[0] = 0
 
-            #         a[self._n] = -1
-            #         b[self._n] = 1
-            #         d[self._n] = -self._xd*math.exp(-0.5*cur_t)
-
-            #     elif approx_type == 2:
-            #         b[0] = -3 - a[1] / self._td / param
-            #         c[0] = 4 - b[1] / self._td / param
-            #         d[0] = 2*self._xd*math.exp(-0.5*cur_t) - d[1] / self._td / param
-
-            #         a[self._n] = -4 + b[self._n-1] / self._td / param
-            #         b[self._n] = 3 + c[self._n-1] / self._td / param
-            #         d[self._n] = -2*self._xd*math.exp(-0.5*cur_t) + d[self._n-1] / self._td / param
-
-            #     elif approx_type == 3:
-            #         b[0] = 1 + (self._xd**2)/(2*self._td)
-            #         c[0] = -1
-            #         d[0] = -self._xd*math.exp(-0.5*cur_t)
-
-            #         a[self._n] = -1
-            #         b[self._n] = 1 + (self._xd**2)/(2*self._td)
-            #         d[self._n] = - self._xd*math.exp(-0.5*cur_t) \
-            #             + self._xd**2/2*(u_prev[self._n]/self._td)
+                d[self._n-2] -= u_new[self._n]*c[self._n-2]
+                c[self._n-2] = 0
                 
-            #     progon = TRIDIAG_SOLVER(a,b,c,d)
+                progon_solver = TRIDIAG_SOLVER(a,b,c,d)
                 
-            #     # try:
-            #     #     u = progon.solve()
-            #     # except Exception as e:
-            #     #     print(e)
-            #     #     sys.exit(1)
+                # try:
+                #     u = progon.solve()
+                # except Exception as e:
+                #     print(e)
+                #     sys.exit(1)
 
-            #     u = progon.solve()
+                progon_solution = progon_solver.solve()
 
-            #     u_prev = deepcopy(u)
+                for i in range(1, self._n):
+                    u_new[i] = progon_solution[i-1]
 
-            #     self._post_solution(u, cur_t, j)
+                self._post_solution(u_new, cur_t, j)
+
+                u_prev = deepcopy(u_cur)
+                u_cur = deepcopy(u_new)
 
 if __name__ == "__main__":
     max_t = 5.0
@@ -198,7 +179,7 @@ if __name__ == "__main__":
 
     solver = PARAB_SOLVER(saving_path=DATA_PATH, max_t = max_t)
 
-    for i in range (1,2):
+    for i in range (1,3):
         for j in range (1,3):
             solver.solve(i, j)
             visualise(path=DATA_PATH, num_plots=num_plots)
