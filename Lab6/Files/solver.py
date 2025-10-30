@@ -13,7 +13,7 @@ DATA_PATH = os.path.join(os.path.split(os.path.realpath(__file__))[0], data_fold
 os.makedirs(DATA_PATH, exist_ok=True)
 
 # Вариант 7
-class PARAB_SOLVER:
+class HYPERB_SOLVER:
     def __init__(self, saving_path, x_steps = 20, max_t = 2.0):
         """
         Папка сохранения результатов saving_path (не должно быть других .txt).
@@ -105,7 +105,7 @@ class PARAB_SOLVER:
         if (approx_type == 1):
             for i in range(self._n+1):
                 x_cur = i*self._xd
-                u_cur[i] = u_prev[i] - self._td*math.exp(x_cur)*math.cos(x_cur)
+                u_cur[i] = u_prev[i] - self._td*math.exp(-x_cur)*math.cos(x_cur)
         else:
             for i in range(self._n+1):
                 x_cur = i*self._xd
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     max_t = 5.0
     num_plots = 5
 
-    solver = PARAB_SOLVER(saving_path=DATA_PATH, max_t = max_t)
+    solver = HYPERB_SOLVER(saving_path=DATA_PATH, max_t = max_t)
 
     for i in range (1,3):
         for j in range (1,3):
