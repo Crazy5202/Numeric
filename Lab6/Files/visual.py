@@ -5,7 +5,7 @@ from natsort import natsorted
 # DATA_FOLDER = "results"
 # PATH = os.path.join(os.path.split(os.path.realpath(__file__))[0], DATA_FOLDER)
 
-def visualise(path: str, num_plots: int = 3, t_round: int = 3):
+def visualise(path: str, title: str = "График", num_plots: int = 3, t_round: int = 3):
 
     data_files = [file for file in os.listdir(path) if file.endswith(".txt") and file[0]!='p']
 
@@ -37,7 +37,7 @@ def visualise(path: str, num_plots: int = 3, t_round: int = 3):
             p.plot(x, u_solved, marker='o', linestyle='-', color='red', label='solved')
             p.plot(x, u_true, marker='o', linestyle='--', color='blue', label='true')
 
-            plt.title("График в момент времени t=" + str(round(t_cur, t_round)))
+            plt.title(title +", t=" + str(round(t_cur, t_round)))
             plt.xlabel('x')
             plt.ylabel('u')
             plt.grid()

@@ -177,9 +177,12 @@ if __name__ == "__main__":
     max_t = 5.0
     num_plots = 5
 
+    method_titles = ["Явная схема", "Неявная схема"]
+    approx_titles = ["1п2т", "2п2т"]
+
     solver = HYPERB_SOLVER(saving_path=DATA_PATH, max_t = max_t)
 
     for i in range (1,3):
         for j in range (1,3):
             solver.solve(i, j)
-            visualise(path=DATA_PATH, num_plots=num_plots)
+            visualise(path=DATA_PATH, num_plots=num_plots, title = method_titles[i-1] + ' ' + approx_titles[j-1])
