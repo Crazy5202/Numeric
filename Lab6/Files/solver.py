@@ -6,7 +6,7 @@ import math
 from copy import deepcopy
 
 from tridiag import TRIDIAG_SOLVER
-from visual import visualise
+from visual import visualise, fixed_scale_animate
 
 data_folder = "results"
 DATA_PATH = os.path.join(os.path.split(os.path.realpath(__file__))[0], data_folder)
@@ -29,7 +29,7 @@ class HYPERB_SOLVER:
         self._path = saving_path
         
         self._n = x_steps
-        self._xd = math.pi / 2 / self._n
+        self._xd = math.pi / 2.0 / self._n
         self._td = 0.5*self._xd
         self._t_steps = int(max_t // self._td)
 
@@ -98,7 +98,7 @@ class HYPERB_SOLVER:
         self._cleanup_dir()
 
         # Для t=0
-        u_prev = [self._start_cond(i*self._xd) for i in range(0, self._n+1)]
+        u_prev = [self._start_cond(i*self._xd) for i in range(self._n+1)]
         u_cur = u_new = deepcopy(u_prev)
 
         # Для t=1 из второго начального условия
@@ -113,8 +113,49 @@ class HYPERB_SOLVER:
                     - self._td**2/2*math.exp(-x_cur)*5*math.cos(x_cur)
         
         if scheme_type == 1:
+            # ЯВНАЯ СХЕМА
+            
+            # for j in range(2, self._t_steps+1):
+            #     cur_t = j*self._td
+            #     u_new[0] = math.exp(-cur_t)*math.cos(2*cur_t)
+            #     u_new[self._n] = 0  # Краевое условие должно быть!
 
-            for j in range (1, self._t_steps+1):
+            #     for i in range(1, self._n):
+            #         A = 1/self._td**2 + 1/self._td
+            #         term1 = (2/self._td**2) * u_cur[i]
+            #         term2 = (-1/self._td**2 + 1/self._td) * u_prev[i]
+            #         term3 = (1/self._xd**2) * (u_cur[i+1] - 2*u_cur[i] + u_cur[i-1])
+            #         term4 = (1/self._xd) * (u_cur[i+1] - u_cur[i-1])
+            #         term5 = -3 * u_cur[i]
+
+            #         u_new[i] = (term1 + term2 + term3 + term4 + term5) / A
+
+            #     self._post_solution(u_new, cur_t, j)
+            #     u_prev, u_cur = u_cur, u_new
+            #     u_new = [0]*(self._n+1)
+            # for j in range(2, self._t_steps+1):
+            #     cur_t = j*self._td
+            #     u_new[0] = math.exp(-cur_t)*math.cos(2*cur_t)
+            #     u_new[self._n] = 0  # ВОССТАНОВИТЬ!
+                
+            #     for i in range(1, self._n):
+            #         # Собираем все члены
+            #         term1 = (u_cur[i+1] - 2*u_cur[i] + u_cur[i-1])/self._xd**2
+            #         term2 = (u_cur[i+1] - u_cur[i-1])/self._xd
+            #         term3 = (2*u_cur[i] - u_prev[i])/self._td**2
+            #         term4 = (u_prev[i])/self._td  # исправлен знак
+                    
+            #         numerator = term3 + term4 + term1 + term2 - 3*u_cur[i]
+            #         denominator = 1/self._td**2 + 1/self._td
+                    
+            #         u_new[i] = numerator / denominator
+
+            #     self._post_solution(u_new, cur_t, j)
+
+            #     u_prev = deepcopy(u_cur)
+            #     u_cur = deepcopy(u_new)
+
+            for j in range (2, self._t_steps+1):
 
                 cur_t = j*self._td
 
@@ -123,9 +164,13 @@ class HYPERB_SOLVER:
 
                 for i in range(1, self._n):
 
-                    u_new[i] = 2*u_cur[i] - u_prev[i] + self._td*u_prev[i] + (self._td/self._xd)**2*(u_cur[i+1]-2*u_cur[i]+u_cur[i-1]) \
-                        + self._td**2/self._xd*(u_cur[i+1]-u_cur[i-1]) - 3*self._td**2*u_cur[i]
-                    u_new[i] /= (1+self._td)
+                    u_new[i] = (2*u_cur[i] - u_prev[i])/(self._td**2) + u_prev[i]/self._td + (1/self._xd)**2*(u_cur[i+1]-2*u_cur[i]+u_cur[i-1]) \
+                        + (1/self._xd)*(u_cur[i+1]-u_cur[i-1]) - 3*u_cur[i]
+                    u_new[i] /= (1/self._td+1/(self._td**2))
+
+                    # u_new[i] = 2*u_cur[i] - u_prev[i] + self._td*u_prev[i] + (self._td/self._xd)**2*(u_cur[i+1]-2*u_cur[i]+u_cur[i-1]) \
+                    #     + self._td**2/self._xd*(u_cur[i+1]-u_cur[i-1]) - 3*self._td**2*u_cur[i]
+                    # u_new[i] /= (1+self._td)
 
                 self._post_solution(u_new, cur_t, j)
 
@@ -134,7 +179,7 @@ class HYPERB_SOLVER:
 
         else:
 
-            for j in range (1, self._t_steps+1):
+            for j in range (2, self._t_steps+1):
                 cur_t = j*self._td
 
                 u_new[0] = math.exp(-cur_t)*math.cos(2*cur_t)
@@ -186,3 +231,4 @@ if __name__ == "__main__":
         for j in range (1,3):
             solver.solve(i, j)
             visualise(path=DATA_PATH, num_plots=num_plots, title = method_titles[i-1] + ' ' + approx_titles[j-1])
+            fixed_scale_animate(path=DATA_PATH, title = method_titles[i-1] + ' ' + approx_titles[j-1])

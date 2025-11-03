@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 import os
 from natsort import natsorted
 
@@ -60,11 +61,85 @@ def visualise(path: str, title: str = "График", num_plots: int = 3, t_roun
         p.plot(x, pogr, marker='', linestyle='-', color='red')
 
         plt.title("Погрешность в зависимости от времени")
-        plt.xlabel('x')
+        plt.xlabel('t')
         plt.ylabel('norm')
         plt.grid()
 
     plt.tight_layout()
     plt.show(block=True)
 
-# visualise(PATH)
+def fixed_scale_animate(path: str, title: str = "График", interval: int = 30, t_round: int = 3, 
+                       xlim: tuple = None, ylim: tuple = None, save_path: str = None, fps: int = 10):
+    """
+    Версия с фиксированным масштабом для сравнения амплитуд
+    """
+    
+    data_files = [file for file in os.listdir(path) if file.endswith(".txt") and file[0] != 'p']
+    data_files = natsorted(data_files)
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Если границы не заданы, вычисляем из всех данных
+    if xlim is None or ylim is None:
+        all_x = []
+        all_u = []
+        for file in data_files:
+            full_path = os.path.join(path, file)
+            with open(full_path, "r") as f:
+                lines = f.readlines()
+                for line in lines[1:]:
+                    vals = line.strip().split()
+                    all_x.append(float(vals[0]))
+                    all_u.append(float(vals[1]))
+                    all_u.append(float(vals[2]))
+        
+        if xlim is None:
+            x_margin = (max(all_x) - min(all_x)) * 0.05
+            xlim = (min(all_x) - x_margin, max(all_x) + x_margin)
+        
+        if ylim is None:
+            u_margin = (max(all_u) - min(all_u)) * 0.1
+            ylim = (min(all_u) - u_margin, max(all_u) + u_margin)
+    
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    
+    # Подготовка данных
+    all_data = []
+    for file in data_files:
+        full_path = os.path.join(path, file)
+        with open(full_path, "r") as f:
+            lines = f.readlines()
+            x, u_solved, u_true = [], [], []
+            for line in lines[1:]:
+                vals = line.strip().split()
+                x.append(float(vals[0]))
+                u_solved.append(float(vals[1]))
+                u_true.append(float(vals[2]))
+            
+            all_data.append((x, u_solved, u_true))
+    
+    # Создание линий
+    line_solved, = ax.plot([], [], 'ro-', label='solved', markersize=4, linewidth=2)
+    line_true, = ax.plot([], [], 'b--', label='true', linewidth=2, alpha=0.8)
+    
+    ax.set_xlabel('x')
+    ax.set_ylabel('u')
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    
+    def animate_frame(i):
+        x, u_solved, u_true = all_data[i]
+        line_solved.set_data(x, u_solved)
+        line_true.set_data(x, u_true)
+        ax.set_title(f"{title}")
+        return line_solved, line_true
+    
+    anim = animation.FuncAnimation(
+        fig, animate_frame, frames=len(all_data),
+        interval=interval, blit=True, repeat=True
+    )
+    
+    plt.tight_layout()
+    plt.show()
+    return anim
