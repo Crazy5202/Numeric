@@ -88,7 +88,7 @@ class DIM_SOLVER:
         """
         cur_true = []
         for j in range(self._ny+1):
-            cur_true.append([self._true_sol(self._xd*i, self._yd*j) for i in range(self._nx+1)])
+            cur_true.append([self._true_sol(self._xd*i, self._yd*j, t) for i in range(self._nx+1)])
                 
         pogr = self._pogr_step(u, cur_true)
         self._write_res(u, cur_true, t, iter, pogr)
@@ -126,50 +126,77 @@ class DIM_SOLVER:
 
                 # Верхняя и нижняя границы
                 for i in range(1, self._nx):
-                    u[0][i] = self._edge_bottom(self._xd*j, cur_t)
-                    u[self._ny][i] = self._edge_top(self._xd*j, cur_t)
+                    u[0][i] = self._edge_bottom(self._xd*i, cur_t)
+                    u[self._ny][i] = self._edge_top(self._xd*i, cur_t)
 
                 # Выбираем направление для неявной схемы
-                if (k%2==0):
-                    # тут по X
-                    a = []; b = []; c = []; d = []
-                    progon_solver = TRIDIAG_SOLVER(a,b,c,d)
-                    # try:
-                    #     u = progon.solve()
-                    # except Exception as e:
-                    #     print(e)
-                    #     sys.exit(1)
-                    progon_solution = progon_solver.solve()
-                    for i in range(1, self._nx):
-                        u[i] = progon_solution[i-1]
-                    pass
-
-                    # a = [0]*(self._n-1); b = [0]*(self._n-1); c = [0]*(self._n-1); d = [0]*(self._n-1)
+                for j in range(1, self._ny):
+                    a = [0]*(self._nx-1); b = [0]*(self._nx-1); c = [0]*(self._nx-1); d = [0]*(self._nx-1)
                         
-                    # for i in range(self._n-1):
+                    for i in range(self._nx-1):
 
-                    #     a[i] = -1/self._xd**2 + 1/self._xd
-                    #     b[i] = 1/self._td**2 + 1/self._td + 2/self._xd**2 + 3
-                    #     c[i] = -(1/self._xd**2 + 1/self._xd)
-                    #     d[i] = (2*u_cur[i+1]-u_prev[i+1])/self._td**2 + u_prev[i+1]/self._td
+                        a[i] = -1/self._xd**2
+                        b[i] = 2/self._xd**2 + 2/self._td
+                        c[i] = -1/self._xd**2
+                        d[i] = 2/self._td*u_prev[j][i] + (1/self._yd**2)*(u_prev[j+1][i]-2*u_prev[j][i]+u_prev[j-1][i]) - (self._xd*i)*(self._yd*j)*math.sin(cur_t)
 
-                    # d[0] -= u_new[0]*a[0]
-                    # a[0] = 0
+                    d[0] -= a[0]*u[j][0]
+                    a[0] = 0
 
-                    # d[self._n-2] -= u_new[self._n]*c[self._n-2]
-                    # c[self._n-2] = 0
-                
-                else:
-                    # тут по Y
-                    pass
+                    d[self._nx-2] -= c[self._nx-2]*u[j][self._nx]
+                    c[self._nx-2] = 0
 
-                self._post_solution(u, cur_t, k)
+                    progon_solver = TRIDIAG_SOLVER(a,b,c,d)
+
+                    progon_solution = progon_solver.solve()
+
+                    for i in range(1, self._nx):
+                        u[j][i] = progon_solution[i-1]
 
                 u_prev = deepcopy(u)
 
-if __name__ == "__main__":
-    solver = DIM_SOLVER(saving_path=DATA_PATH, x_steps = 5, y_steps = 10)
+                cur_t += 0.5
 
-    for i in range (1,3):
+                # Левая и правая границы
+                for j in range(self._ny+1):
+                    u[j][0] = self._edge_left(self._yd*j, cur_t)
+                    u[j][self._nx] = self._edge_right(self._yd*j, cur_t)
+
+                # Верхняя и нижняя границы
+                for i in range(1, self._nx):
+                    u[0][i] = self._edge_bottom(self._xd*i, cur_t)
+                    u[self._ny][i] = self._edge_top(self._xd*i, cur_t)
+
+                for i in range(1, self._nx):
+                    a = [0]*(self._ny-1); b = [0]*(self._ny-1); c = [0]*(self._ny-1); d = [0]*(self._ny-1)
+                        
+                    for j in range(self._ny-1):
+
+                        a[j] = -1/self._yd**2
+                        b[j] = 2/self._yd**2 + 2/self._td
+                        c[j] = -1/self._yd**2
+                        d[j] = 2/self._td*u_prev[j][i] + (1/self._xd**2)*(u_prev[j][i+1]-2*u_prev[j][i]+u_prev[j][i-1]) - (self._xd*i)*(self._yd*j)*math.sin(cur_t)
+
+                    d[0] -= a[0]*u[0][i]
+                    a[0] = 0
+
+                    d[self._ny-2] -= c[self._ny-2]*u[self._ny][i]
+                    c[self._ny-2] = 0
+
+                    progon_solver = TRIDIAG_SOLVER(a,b,c,d)
+
+                    progon_solution = progon_solver.solve()
+
+                    for j in range(1, self._ny):
+                        u[j][i] = progon_solution[j-1]
+                
+                u_prev = deepcopy(u)
+
+                self._post_solution(u, cur_t, k)
+
+if __name__ == "__main__":
+    solver = DIM_SOLVER(saving_path=DATA_PATH, x_steps = 10, y_steps = 20, max_t = 5.0)
+
+    for i in range (1,2):
         solver.solve(i)
         visualise(path=DATA_PATH)

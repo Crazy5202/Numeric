@@ -5,7 +5,7 @@ from matplotlib.patches import Patch
 import os
 from natsort import natsorted
 
-def visualise(path: str, title: str = "График", num_plots: int = 3):
+def visualise(path: str, title: str = "График", num_plots: int = 3, round_t = 3):
 
 
     data_files = [file for file in os.listdir(path) if file.endswith(".txt") and file[0]!='p']
@@ -24,7 +24,7 @@ def visualise(path: str, title: str = "График", num_plots: int = 3):
 
         with open(full_path, "r") as f:
             lines = f.readlines()
-            cur_iter = int(lines[0])
+            cur_t = float(lines[0])
             ys = []
             xs = []
             us = []
@@ -57,7 +57,7 @@ def visualise(path: str, title: str = "График", num_plots: int = 3):
         ax.plot_surface(XX, YY, Z_solved, cmap='viridis', zorder = 10, alpha=0.6, linewidth=0, antialiased=True)
         
         
-        ax.set_title(title +", iter=" + str(cur_iter))
+        ax.set_title(title +", t=" + str(round(cur_t,round_t)))
 
         ax.set_xlabel('x')
         ax.set_ylabel('y')
@@ -84,8 +84,8 @@ def visualise(path: str, title: str = "График", num_plots: int = 3):
 
         p.plot(x, pogr, marker='', linestyle='-', color='red')
 
-        plt.title("Погрешность в зависимости от итерации")
-        plt.xlabel('iter')
+        plt.title("Погрешность в зависимости от времени")
+        plt.xlabel('t')
         plt.ylabel('norm')
         plt.grid()
 
