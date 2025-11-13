@@ -4,7 +4,6 @@ os.environ["QT_LOGGING_RULES"] = "qt.qpa.wayland=false;qt.qpa.socketnotifier=fal
 
 import math
 from copy import deepcopy
-import sys
 
 from visual import visualise
 
@@ -136,7 +135,7 @@ class ELLIP_SOLVER:
         cur_iter = 1
         end_crit = 1e9
         
-        if scheme_type == 1:
+        if scheme_type == 1: # МПИ
 
             while (end_crit > eps):
             
@@ -159,8 +158,10 @@ class ELLIP_SOLVER:
             print(f"Закончили вычисления на итерации {cur_iter-1} с значением критерия остановки {end_crit}")
 
         else:
+            # Изначально используется только часть с методом Зейделя
             param = 1.0
 
+            # "Включается" верхняя релаксация
             if scheme_type == 3:
                 param = w
 
@@ -187,7 +188,7 @@ class ELLIP_SOLVER:
             print(f"Закончили вычисления на итерации {cur_iter-1} с значением критерия остановки {end_crit}")
 
 if __name__ == "__main__":
-    solver = ELLIP_SOLVER(saving_path=DATA_PATH)
+    solver = ELLIP_SOLVER(saving_path=DATA_PATH, y_steps = 20)
 
     for i in range (1,4):
         solver.solve(i)
