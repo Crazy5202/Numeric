@@ -6,6 +6,7 @@ import math
 from copy import deepcopy
 
 from visual import visualise
+from tridiag import TRIDIAG_SOLVER
 
 data_folder = "results"
 DATA_PATH = os.path.join(os.path.split(os.path.realpath(__file__))[0], data_folder)
@@ -13,7 +14,7 @@ os.makedirs(DATA_PATH, exist_ok=True)
 
 # Вариант 7
 class DIM_SOLVER:
-    def __init__(self, saving_path: str, x_steps: int = 10, y_steps: int = 10, max_t: float = 2.0, t_step:float = 0.1):
+    def __init__(self, saving_path: str, x_steps: int = 20, y_steps: int = 20, max_t: float = 2.0, t_step: float = 0.1):
         """
         Папка сохранения результатов saving_path (не должно быть других .txt).
         
@@ -35,10 +36,10 @@ class DIM_SOLVER:
         self._td = t_step
         self._t_steps = int(max_t // self._td)
 
-        self._start_left = lambda y: 0*y
-        self._start_right = lambda y,t: y*math.cos(t)
-        self._start_bottom = lambda x: 0*x
-        self._start_top = lambda x,t: x*math.cos(t)
+        self._edge_left = lambda y,t: 0*y
+        self._edge_right = lambda y,t: y*math.cos(t)
+        self._edge_bottom = lambda x,t: 0*x
+        self._edge_top = lambda x,t: x*math.cos(t)
 
         self._start_cond = lambda x,y: x*y
 
@@ -55,21 +56,21 @@ class DIM_SOLVER:
             os.remove(file_path)
             # print(f"Removed: {file_path}")
 
-    def _write_res(self, u:list[list[float]], ts: list[list[float]], iter:int, pogr: float):
+    def _write_res(self, u:list[list[float]], ts: list[list[float]], cur_t:float, iter:int, pogr: float):
         """
         Записать время, вычисленное и точное значение для каждой точки в файл.
         """
         
         ind_path = self._path + '/' + str(iter) + ".txt"
         with open(ind_path, "w") as f:
-            f.write(str(iter) + '\n')
+            f.write(str(cur_t) + '\n')
             for j in range (self._ny+1):
                 for i in range (self._nx+1):
                     f.write(str(j*self._yd) + ' ' + str(i*self._xd) + ' ' +  str(u[j][i]) + ' ' + str(ts[j][i]) + '\n')
 
         pogr_path = self._path + "/p.txt"
         with open(pogr_path, "a") as f:
-            f.write(str(iter) + ' ' + str(pogr) + '\n')
+            f.write(str(cur_t) + ' ' + str(pogr) + '\n')
 
     def _pogr_step(self, u: list[float], ts: list[float]):
         """
@@ -81,7 +82,7 @@ class DIM_SOLVER:
                 pogr = max(pogr, abs(u[j][i]-ts[j][i]))
         return pogr
         
-    def _post_solution(self, u:list[float], iter:float):
+    def _post_solution(self, u:list[float], t:float, iter:float):
         """
         Сделать действия после шага решения.
         """
@@ -90,110 +91,84 @@ class DIM_SOLVER:
             cur_true.append([self._true_sol(self._xd*i, self._yd*j) for i in range(self._nx+1)])
                 
         pogr = self._pogr_step(u, cur_true)
-        self._write_res(u, cur_true, iter, pogr)
+        self._write_res(u, cur_true, t, iter, pogr)
 
-    def solve(self, scheme_type: int = 1, eps: float = 1e-3, interpol: bool = True, w: int = 1.5):
+    def solve(self, scheme_type: int = 1):
         """
         Вычислить и сохранить решение.
 
         Args:
-
-            scheme_type (str): Тип схемы. 1 - МПИ, 2 - Зейдель, 3 - Верхняя релаксация.
-            
-            w (float): параметр верхней релаксации (1;2).
-
-            interpol (bool): Производить ли интерполяцию по границам.
+            scheme_type (str): Тип метода. 1 - переменных направлений, 2 - дробных шагов.
         """
 
-        # if scheme_type not in [1,2,3] or w <= 1 or w >= 2:
-        #     raise ValueError("Неверно указаны параметры решателя!")
+        if scheme_type not in [1,2]:
+            raise ValueError("Неверно указаны параметры решателя!")
         
-        # self._cleanup_dir()
+        self._cleanup_dir()
 
-        # u = []
+        u = []
 
-        # # Нижняя граница
-        # u.append([self._start_bottom(self._xd*i) for i in range(self._nx+1)])
+        for j in range(self._ny+1):
+            u.append([self._start_cond(self._xd*i, self._yd*j) for i in range(self._nx+1)])
 
-        # # Всё кроме нижней и верхней границы
-        # for _ in range(1, self._ny):
-        #     u.append([0]*(self._nx+1))
-
-        # # Верхняя граница
-        # u.append([self._start_top(self._xd*i) for i in range(self._nx+1)])
-
-        # # Левая и правая граница
-        # for j in range(self._ny+1):
-        #     u[j][0] = self._start_left(self._yd*j)
-        #     u[j][self._nx] = self._start_right(self._yd*j)
-
-        # # Интерпроляция
-        # if (interpol == True):
-        #     for j in range(1, self._ny):
-        #         for i in range(1, self._nx):
-        #             f1 = (u[0][0] * (self._nx+1-i) + u[0][self._nx] * i) / (self._nx + 1)
-        #             f2 = (u[self._ny][0] * (self._nx+1-i) + u[self._ny][self._nx] * i) / (self._nx + 1)
-        #             u[j][i] = (f1 * (self._ny+1-j) + f2 * j) / (self._ny + 1)
-
-        # u_prev = deepcopy(u)
-
-        # cur_iter = 1
-        # end_crit = 1e9
+        u_prev = deepcopy(u)
         
-        # if scheme_type == 1: # МПИ
+        if scheme_type == 1: # МПИ
 
-        #     while (end_crit > eps):
-            
-        #         for j in range(1, self._ny):
+            for k in range (1, self._t_steps+1):
 
-        #             for i in range(1, self._nx):
+                cur_t = k*self._td
 
-        #                 u[j][i] = (u_prev[j][i+1] + u_prev[j][i-1]) / (self._xd**2) + (u_prev[j+1][i] + u_prev[j-1][i]) / (self._yd**2)
+                # Левая и правая границы
+                for j in range(self._ny+1):
+                    u[j][0] = self._edge_left(self._yd*j, cur_t)
+                    u[j][self._nx] = self._edge_right(self._yd*j, cur_t)
 
-        #                 u[j][i] /= (2 / self._xd**2) + (2 / self._yd**2) - 2
+                # Верхняя и нижняя границы
+                for i in range(1, self._nx):
+                    u[0][i] = self._edge_bottom(self._xd*j, cur_t)
+                    u[self._ny][i] = self._edge_top(self._xd*j, cur_t)
 
-        #         self._post_solution(u, cur_iter)
+                # Выбираем направление для неявной схемы
+                if (k%2==0):
+                    # тут по X
+                    a = []; b = []; c = []; d = []
+                    progon_solver = TRIDIAG_SOLVER(a,b,c,d)
+                    # try:
+                    #     u = progon.solve()
+                    # except Exception as e:
+                    #     print(e)
+                    #     sys.exit(1)
+                    progon_solution = progon_solver.solve()
+                    for i in range(1, self._nx):
+                        u[i] = progon_solution[i-1]
+                    pass
 
-        #         end_crit = self._pogr_step(u_prev, u)
+                    # a = [0]*(self._n-1); b = [0]*(self._n-1); c = [0]*(self._n-1); d = [0]*(self._n-1)
+                        
+                    # for i in range(self._n-1):
 
-        #         u_prev = deepcopy(u)
+                    #     a[i] = -1/self._xd**2 + 1/self._xd
+                    #     b[i] = 1/self._td**2 + 1/self._td + 2/self._xd**2 + 3
+                    #     c[i] = -(1/self._xd**2 + 1/self._xd)
+                    #     d[i] = (2*u_cur[i+1]-u_prev[i+1])/self._td**2 + u_prev[i+1]/self._td
 
-        #         cur_iter += 1
+                    # d[0] -= u_new[0]*a[0]
+                    # a[0] = 0
 
-        #     print(f"Закончили вычисления на итерации {cur_iter-1} с значением критерия остановки {end_crit}")
+                    # d[self._n-2] -= u_new[self._n]*c[self._n-2]
+                    # c[self._n-2] = 0
+                
+                else:
+                    # тут по Y
+                    pass
 
-        # else:
-        #     # Изначально используется только часть с методом Зейделя
-        #     param = 1.0
+                self._post_solution(u, cur_t, k)
 
-        #     # "Включается" верхняя релаксация
-        #     if scheme_type == 3:
-        #         param = w
-
-        #     while (end_crit > eps):
-        
-        #         for j in range(1, self._ny):
-
-        #             for i in range(1, self._nx):
-
-        #                 u[j][i] = (u_prev[j][i+1] + u[j][i-1]) / (self._xd**2) + (u_prev[j+1][i] + u[j-1][i]) / (self._yd**2)
-
-        #                 u[j][i] /= (2 / self._xd**2) + (2 / self._yd**2) - 2
-
-        #                 u[j][i] = (1.0 - param) * u_prev[j][i] + param * u[j][i]
-
-        #         self._post_solution(u, cur_iter)
-
-        #         end_crit = self._pogr_step(u_prev, u)
-
-        #         u_prev = deepcopy(u)
-
-        #         cur_iter += 1
-
-        #     print(f"Закончили вычисления на итерации {cur_iter-1} с значением критерия остановки {end_crit}")
+                u_prev = deepcopy(u)
 
 if __name__ == "__main__":
-    solver = DIM_SOLVER(saving_path=DATA_PATH)
+    solver = DIM_SOLVER(saving_path=DATA_PATH, x_steps = 5, y_steps = 10)
 
     for i in range (1,3):
         solver.solve(i)
