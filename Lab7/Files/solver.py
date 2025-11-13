@@ -14,7 +14,7 @@ os.makedirs(DATA_PATH, exist_ok=True)
 
 # Вариант 7
 class ELLIP_SOLVER:
-    def __init__(self, saving_path, x_steps = 20, y_steps = 20):
+    def __init__(self, saving_path, x_steps = 10, y_steps = 10):
         """
         Папка сохранения результатов saving_path (не должно быть других .txt).
         
@@ -88,7 +88,7 @@ class ELLIP_SOLVER:
         pogr = self._pogr_step(u, cur_true)
         self._write_res(u, cur_true, iter, pogr)
 
-    def solve(self, scheme_type: int = 1, eps: float = 0.1, interpol: bool = True, w: int = 1.5):
+    def solve(self, scheme_type: int = 1, eps: float = 1e-3, interpol: bool = True, w: int = 1.5):
         """
         Вычислить и сохранить решение.
 
@@ -158,69 +158,37 @@ class ELLIP_SOLVER:
 
             print(f"Закончили вычисления на итерации {cur_iter-1} с значением критерия остановки {end_crit}")
 
-        # else:
-        #     param = 1
-        #     if scheme_type == 3:
-        #         param = 0.5
+        else:
+            param = 1.0
 
-        #     for j in range (1, self._t_steps+1):
-        #         cur_t = j*self._td
-        #         a = [0]*(self._n+1); b = [0]*(self._n+1); c = [0]*(self._n+1); d = [0]*(self._n+1)
-                    
-        #         for i in range(1, self._n):
-        #             cur_x = self._xd*i
+            if scheme_type == 3:
+                param = w
 
-        #             a[i] = -self._td*param
-        #             b[i] = self._xd**2 + 2*self._td*param
-        #             c[i] = -self._td*param
-        #             d[i] = u[i]*(self._xd**2) + self._td*(1-param)*(u[i+1]-2*u[i]+u[i-1]) \
-        #                 + 0.5*(self._xd**2)*self._td*math.sin(cur_x)*(param*math.exp(-0.5*cur_t)+(1-param)*math.exp(-0.5*(cur_t-self._td)))
+            while (end_crit > eps):
+        
+                for j in range(1, self._ny):
 
-        #         if approx_type == 1:
-        #             b[0] = -1
-        #             c[0] = 1
-        #             d[0] = self._xd*math.exp(-0.5*cur_t)
+                    for i in range(1, self._nx):
 
-        #             a[self._n] = -1
-        #             b[self._n] = 1
-        #             d[self._n] = -self._xd*math.exp(-0.5*cur_t)
+                        u[j][i] = (u_prev[j][i+1] + u[j][i-1]) / (self._xd**2) + (u_prev[j+1][i] + u[j-1][i]) / (self._yd**2)
 
-        #         elif approx_type == 2:
-        #             b[0] = -3 - a[1] / self._td / param
-        #             c[0] = 4 - b[1] / self._td / param
-        #             d[0] = 2*self._xd*math.exp(-0.5*cur_t) - d[1] / self._td / param
+                        u[j][i] /= (2 / self._xd**2) + (2 / self._yd**2) - 2
 
-        #             a[self._n] = -4 + b[self._n-1] / self._td / param
-        #             b[self._n] = 3 + c[self._n-1] / self._td / param
-        #             d[self._n] = -2*self._xd*math.exp(-0.5*cur_t) + d[self._n-1] / self._td / param
+                        u[j][i] = (1.0 - param) * u_prev[j][i] + param * u[j][i]
 
-        #         elif approx_type == 3:
-        #             b[0] = 1 + (self._xd**2)/(2*self._td)
-        #             c[0] = -1
-        #             d[0] = -self._xd*math.exp(-0.5*cur_t)
+                self._post_solution(u, cur_iter)
 
-        #             a[self._n] = -1
-        #             b[self._n] = 1 + (self._xd**2)/(2*self._td)
-        #             d[self._n] = - self._xd*math.exp(-0.5*cur_t) \
-        #                 + self._xd**2/2*(u_prev[self._n]/self._td)
-                
-        #         # progon = TRIDIAG_SOLVER(a,b,c,d)
-                
-        #         # # try:
-        #         # #     u = progon.solve()
-        #         # # except Exception as e:
-        #         # #     print(e)
-        #         # #     sys.exit(1)
+                end_crit = self._pogr_step(u_prev, u)
 
-        #         # u = progon.solve()
+                u_prev = deepcopy(u)
 
-        #         u_prev = deepcopy(u)
+                cur_iter += 1
 
-        #         self._post_solution(u, cur_t, j)
+            print(f"Закончили вычисления на итерации {cur_iter-1} с значением критерия остановки {end_crit}")
 
 if __name__ == "__main__":
-    solver = ELLIP_SOLVER(saving_path=DATA_PATH, x_steps = 10, y_steps = 10)
+    solver = ELLIP_SOLVER(saving_path=DATA_PATH)
 
-    for i in range (1,2):
-        solver.solve(i, eps = 0.01)
+    for i in range (1,4):
+        solver.solve(i)
         visualise(path=DATA_PATH)
